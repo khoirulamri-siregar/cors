@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Origin PoC</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #111;
+            color: #fff;
+            padding: 40px;
+            text-align: center;
+        }
+        code {
+            background: #222;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h2>PoC Origin Test Page</h2>
+    <p>Halaman ini digunakan untuk pengujian <b>CORS Vulnerability</b>.</p>
+    <p>Origin kamu sekarang adalah:</p>
+    <p><code id="origin"></code></p>
+
+    <script>
+        document.getElementById("origin").textContent = window.location.origin;
+    </script>
+</body>
+</html>
