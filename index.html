@@ -3,30 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Origin PoC</title>
+    <title>Cache Poisoning Redirect Proof</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: #111;
-            color: #fff;
+            background: #121212;
+            color: #e0e0e0;
             padding: 40px;
-            text-align: center;
+            max-width: 900px;
+            margin: auto;
+            line-height: 1.6;
+        }
+        .container {
+            background: #1d1d1d;
+            padding: 28px;
+            border-radius: 12px;
+            border: 1px solid #333;
+        }
+        h1 {
+            margin-top: 0;
+            color: #4db5ff;
         }
         code {
             background: #222;
-            padding: 4px 8px;
-            border-radius: 4px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            word-break: break-all;
+            display: block;
+            margin: 8px 0;
+        }
+        .section-title {
+            color: #9cd3ff;
+            margin-top: 20px;
+        }
+        .note {
+            font-size: 13px;
+            opacity: 0.75;
+            margin-top: 18px;
         }
     </style>
 </head>
 <body>
-    <h2>PoC Origin Test Page</h2>
-    <p>Halaman ini digunakan untuk pengujian <b>CORS Vulnerability</b>.</p>
-    <p>Origin kamu sekarang adalah:</p>
-    <p><code id="origin"></code></p>
 
-    <script>
-        document.getElementById("origin").textContent = window.location.origin;
-    </script>
+<div class="container">
+    <h1>Cache Poisoning Redirect - Validation Page</h1>
+
+    <p>
+        This page is intentionally hosted by the security researcher for the purpose 
+        of demonstrating the impact of a <strong>Shared CDN Cache Poisoning</strong> vulnerability.
+        If you are seeing this page, it means your request was redirected here 
+        as a result of a previously poisoned cache entry.
+    </p>
+
+    <h2 class="section-title">Final Destination (After Redirect)</h2>
+    <code id="final-url"></code>
+
+    <h2 class="section-title">Purpose of This Page</h2>
+    <p>
+        This page serves as evidence that a redirect response, influenced by 
+        attacker-controlled input, was cached by the CDN and delivered to normal 
+        users without requiring the malicious header to be present. This confirms:
+    </p>
+
+    <ul>
+        <li>The redirect was stored as a shared cache variant.</li>
+        <li>Visitors received a poisoned redirect response.</li>
+        <li>The CDN did not include relevant request headers in its cache key.</li>
+    </ul>
+
+    <h2 class="section-title">Technical Notes</h2>
+    <p>
+        For validation purposes, the researcher can provide:
+    </p>
+    <ul>
+        <li>The poisoning request sent to the origin.</li>
+        <li>The cached response showing <code>x-cache: HIT</code>.</li>
+        <li>The redirect chain leading to this page.</li>
+        <li>Timestamps, headers, and request logs if required.</li>
+    </ul>
+
+    <p class="note">
+        No malicious content is delivered from this domain. This page is used exclusively 
+        for vulnerability validation under an authorized security testing program.
+    </p>
+
+</div>
+
+<script>
+    document.getElementById("final-url").textContent = window.location.href;
+</script>
+
 </body>
 </html>
