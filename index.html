@@ -1,164 +1,516 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <title>Gravion Web</title>
-  <style>
-    body { margin:0; overflow:hidden; background:black; }
-    video { display:none; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PARTICLE GESTURE</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #000;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+    touch-action: none;
+  }
+  #canvas-container {
+    position: fixed; inset: 0;
+  }
+  #three-canvas {
+    position: absolute; inset: 0;
+    width: 100% !important; height: 100% !important;
+  }
+  #webcam-preview {
+    position: fixed;
+    bottom: 16px; right: 16px;
+    width: 140px; height: 105px;
+    border: 1px solid rgba(0,255,180,0.3);
+    border-radius: 6px;
+    overflow: hidden;
+    opacity: 0.7;
+    z-index: 10;
+  }
+  #webcam-preview video,
+  #webcam-preview canvas {
+    position: absolute;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+  }
+  #overlay-canvas { z-index: 2; }
+
+  #hud {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 20;
+    pointer-events: none;
+  }
+  #title {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+  }
+  #status-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  #gesture-indicator {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: rgba(0,255,180,0.5);
+    text-transform: uppercase;
+    transition: color 0.3s;
+  }
+  #gesture-indicator.active {
+    color: #00ffb4;
+    text-shadow: 0 0 12px rgba(0,255,180,0.6);
+  }
+  #dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: rgba(0,255,180,0.3);
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+  #dot.active {
+    background: #00ffb4;
+    box-shadow: 0 0 10px rgba(0,255,180,0.8);
+  }
+  #bottom-hud {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 20;
+    pointer-events: none;
+  }
+  .hint {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,0.2);
+    text-transform: uppercase;
+  }
+  #particle-count {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,0.2);
+  }
+  #loading-screen {
+    position: fixed; inset: 0;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    gap: 20px;
+  }
+  #loading-title {
+    font-size: 10px;
+    letter-spacing: 6px;
+    color: rgba(0,255,180,0.6);
+    text-transform: uppercase;
+  }
+  #loading-bar-wrap {
+    width: 200px;
+    height: 1px;
+    background: rgba(255,255,255,0.1);
+    position: relative;
+    overflow: hidden;
+  }
+  #loading-bar {
+    position: absolute;
+    left: -100%;
+    top: 0; bottom: 0;
+    width: 100%;
+    background: linear-gradient(90deg, transparent, #00ffb4, transparent);
+    animation: sweep 1.2s ease-in-out infinite;
+  }
+  @keyframes sweep {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
+  #loading-msg {
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.25);
+    text-transform: uppercase;
+  }
+</style>
 </head>
 <body>
 
-<video id="input_video" autoplay playsinline></video>
+<div id="loading-screen">
+  <div id="loading-title">PARTICLE GESTURE</div>
+  <div id="loading-bar-wrap"><div id="loading-bar"></div></div>
+  <div id="loading-msg">Memuat sistem…</div>
+</div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.152/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<div id="canvas-container">
+  <canvas id="three-canvas"></canvas>
+</div>
+
+<div id="webcam-preview">
+  <video id="webcam" autoplay muted playsinline></video>
+  <canvas id="overlay-canvas"></canvas>
+</div>
+
+<div id="hud">
+  <div id="title">PARTICLE GESTURE</div>
+  <div id="status-wrap">
+    <div id="gesture-indicator">CHAOS</div>
+    <div id="dot"></div>
+  </div>
+</div>
+
+<div id="bottom-hud">
+  <div class="hint">✊ Kepal → Saturnus · 🖐 Buka → Chaos</div>
+  <div id="particle-count"></div>
+</div>
+
+<!-- THREE.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<!-- MediaPipe -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
 <script>
-let scene, camera, renderer;
-let particles = [];
-let particleCount = 500;
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+const PARTICLE_COUNT = isMobile ? 400 : 700;
+const LERP_SPEED_FORM = 0.04;
+const LERP_SPEED_FREE = 0.025;
+const SPREAD = 5.0;
 
-let mode = "FREE"; // FREE / FORM
-let center = {x: 0, y: 0};
+// ─── THREE.JS SETUP ────────────────────────────────────────────────────────
+const canvas = document.getElementById('three-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMobile, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x000000, 1);
+renderer.setSize(window.innerWidth, window.innerHeight);
 
-init();
-animate();
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 100);
+camera.position.z = 7;
 
-function init() {
-  scene = new THREE.Scene();
+// ─── PARTICLES ─────────────────────────────────────────────────────────────
+const positions = new Float32Array(PARTICLE_COUNT * 3);
+const colors    = new Float32Array(PARTICLE_COUNT * 3);
+const sizes     = new Float32Array(PARTICLE_COUNT);
 
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.z = 200;
+const velX = new Float32Array(PARTICLE_COUNT);
+const velY = new Float32Array(PARTICLE_COUNT);
+const velZ = new Float32Array(PARTICLE_COUNT);
+const txArr = new Float32Array(PARTICLE_COUNT);
+const tyArr = new Float32Array(PARTICLE_COUNT);
+const tzArr = new Float32Array(PARTICLE_COUNT);
 
-  renderer = new THREE.WebGLRenderer();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
+// Saturn form targets
+const saturnTargets = [];
+const CORE_COUNT   = Math.floor(PARTICLE_COUNT * 0.40);
+const RING_COUNT   = PARTICLE_COUNT - CORE_COUNT;
 
-  let geometry = new THREE.BufferGeometry();
-  let positions = new Float32Array(particleCount * 3);
-
-  for (let i = 0; i < particleCount; i++) {
-    positions[i*3] = (Math.random()-0.5)*400;
-    positions[i*3+1] = (Math.random()-0.5)*400;
-    positions[i*3+2] = 0;
-
-    particles.push({
-      vx: (Math.random()-0.5)*2,
-      vy: (Math.random()-0.5)*2,
-      tx: 0,
-      ty: 0
-    });
+function buildSaturnTargets() {
+  saturnTargets.length = 0;
+  // Core: sphere
+  for (let i = 0; i < CORE_COUNT; i++) {
+    const phi   = Math.random() * Math.PI * 2;
+    const theta = Math.acos(2 * Math.random() - 1);
+    const r     = 0.55 * Math.cbrt(Math.random());
+    saturnTargets.push(
+      r * Math.sin(theta) * Math.cos(phi),
+      r * Math.sin(theta) * Math.sin(phi),
+      r * Math.cos(theta) * 0.3
+    );
   }
+  // Ring: ellipse
+  for (let i = 0; i < RING_COUNT; i++) {
+    const angle  = Math.random() * Math.PI * 2;
+    const radius = 0.85 + Math.random() * 0.55;
+    const spread = (Math.random() - 0.5) * 0.10;
+    saturnTargets.push(
+      radius * Math.cos(angle),
+      spread,
+      radius * Math.sin(angle) * 0.32
+    );
+  }
+}
+buildSaturnTargets();
 
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+// Init particles
+for (let i = 0; i < PARTICLE_COUNT; i++) {
+  const i3 = i * 3;
+  positions[i3]   = (Math.random() - 0.5) * SPREAD;
+  positions[i3+1] = (Math.random() - 0.5) * SPREAD;
+  positions[i3+2] = (Math.random() - 0.5) * SPREAD;
 
-  let material = new THREE.PointsMaterial({ color: 0xffffff, size: 2 });
-  let points = new THREE.Points(geometry, material);
-  scene.add(points);
+  velX[i] = (Math.random() - 0.5) * 0.012;
+  velY[i] = (Math.random() - 0.5) * 0.012;
+  velZ[i] = (Math.random() - 0.5) * 0.012;
 
-  window.points = points;
+  txArr[i] = positions[i3];
+  tyArr[i] = positions[i3+1];
+  tzArr[i] = positions[i3+2];
 
-  setupHandTracking();
+  // Color: neon spectrum
+  const hue = Math.random();
+  const col = new THREE.Color().setHSL(hue * 0.4 + 0.45, 0.9, 0.75); // cyan-purple range
+  colors[i3]   = col.r;
+  colors[i3+1] = col.g;
+  colors[i3+2] = col.b;
+
+  sizes[i] = isMobile ? (1.5 + Math.random() * 1.5) : (1.2 + Math.random() * 1.8);
 }
 
-function animate() {
+const geometry = new THREE.BufferGeometry();
+geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+geometry.setAttribute('color',    new THREE.BufferAttribute(colors, 3));
+geometry.setAttribute('size',     new THREE.BufferAttribute(sizes, 1));
+
+const vertexShader = `
+  attribute float size;
+  attribute vec3 color;
+  varying vec3 vColor;
+  void main() {
+    vColor = color;
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    gl_PointSize = size * (300.0 / -mvPosition.z);
+    gl_Position = projectionMatrix * mvPosition;
+  }
+`;
+
+const fragmentShader = `
+  varying vec3 vColor;
+  void main() {
+    vec2 uv = gl_PointCoord - 0.5;
+    float d = length(uv);
+    if (d > 0.5) discard;
+    float alpha = smoothstep(0.5, 0.1, d);
+    gl_FragColor = vec4(vColor, alpha);
+  }
+`;
+
+const material = new THREE.ShaderMaterial({
+  vertexShader, fragmentShader,
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+  vertexColors: true,
+});
+
+const particles = new THREE.Points(geometry, material);
+scene.add(particles);
+
+// ─── STATE ─────────────────────────────────────────────────────────────────
+let mode = 'FREE'; // 'FREE' | 'FORM'
+let formCenter = { x: 0, y: 0 };
+let handDetected = false;
+let formProgress = 0; // 0→1 for smooth fade
+
+// ─── GESTURE DETECTION ─────────────────────────────────────────────────────
+function isFist(landmarks) {
+  // Check 4 fingers: index(8,6), middle(12,10), ring(16,14), pinky(20,18)
+  const pairs = [[8,6],[12,10],[16,14],[20,18]];
+  let closedCount = 0;
+  for (const [tip, pip] of pairs) {
+    if (landmarks[tip].y > landmarks[pip].y) closedCount++;
+  }
+  return closedCount >= 3;
+}
+
+// ─── HAND TRACKING ─────────────────────────────────────────────────────────
+const video    = document.getElementById('webcam');
+const overlayC = document.getElementById('overlay-canvas');
+const overlayCtx = overlayC.getContext('2d');
+
+const gestureEl   = document.getElementById('gesture-indicator');
+const dotEl       = document.getElementById('dot');
+const pcountEl    = document.getElementById('particle-count');
+pcountEl.textContent = PARTICLE_COUNT + ' PARTICLES';
+
+const hands = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+hands.setOptions({
+  maxNumHands: 1,
+  modelComplexity: isMobile ? 0 : 1,
+  minDetectionConfidence: 0.65,
+  minTrackingConfidence: 0.55,
+});
+
+hands.onResults(results => {
+  overlayCtx.clearRect(0, 0, overlayC.width, overlayC.height);
+
+  if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+    const lm = results.multiHandLandmarks[0];
+    handDetected = true;
+
+    // Draw minimal skeleton
+    overlayCtx.save();
+    overlayCtx.scale(-1, 1);
+    overlayCtx.translate(-overlayC.width, 0);
+    drawConnectors(overlayCtx, lm, HAND_CONNECTIONS, { color: 'rgba(0,255,180,0.25)', lineWidth: 1 });
+    drawLandmarks(overlayCtx, lm, { color: 'rgba(0,255,180,0.5)', radius: 2 });
+    overlayCtx.restore();
+
+    const wrist = lm[0];
+    // Map mirrored: wrist.x=0 → right, 1 → left; convert to NDC
+    formCenter.x = -(wrist.x - 0.5) * 2 * 4.5;
+    formCenter.y = -(wrist.y - 0.5) * 2 * 3;
+
+    const fist = isFist(lm);
+    if (fist) {
+      mode = 'FORM';
+      gestureEl.textContent = 'SATURNUS';
+      gestureEl.classList.add('active');
+      dotEl.classList.add('active');
+      buildSaturnTargets(); // refresh each detection
+    } else {
+      mode = 'FREE';
+      gestureEl.textContent = 'CHAOS';
+      gestureEl.classList.remove('active');
+      dotEl.classList.remove('active');
+    }
+  } else {
+    handDetected = false;
+    mode = 'FREE';
+    gestureEl.textContent = 'CHAOS';
+    gestureEl.classList.remove('active');
+    dotEl.classList.remove('active');
+  }
+});
+
+const mpCamera = new Camera(video, {
+  onFrame: async () => { await hands.send({ image: video }); },
+  width: 320, height: 240,
+});
+
+// ─── ANIMATION LOOP ────────────────────────────────────────────────────────
+const posAttr  = geometry.attributes.position;
+const colAttr  = geometry.attributes.color;
+
+let lastTime = 0;
+function animate(time) {
   requestAnimationFrame(animate);
 
-  let pos = window.points.geometry.attributes.position.array;
+  const dt = Math.min((time - lastTime) / 16.67, 3); // normalized delta
+  lastTime = time;
 
-  for (let i = 0; i < particleCount; i++) {
+  const targetProgress = mode === 'FORM' ? 1 : 0;
+  formProgress += (targetProgress - formProgress) * 0.04 * dt;
 
-    let px = pos[i*3];
-    let py = pos[i*3+1];
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    const i3 = i * 3;
 
-    if (mode === "FREE") {
-      px += particles[i].vx;
-      py += particles[i].vy;
+    if (mode === 'FORM') {
+      // Target: saturn position + center offset
+      const si = i * 3;
+      const sx = saturnTargets[si]   + formCenter.x;
+      const sy = saturnTargets[si+1] + formCenter.y;
+      const sz = saturnTargets[si+2];
+
+      txArr[i] = sx;
+      tyArr[i] = sy;
+      tzArr[i] = sz;
+
+      positions[i3]   += (txArr[i] - positions[i3])   * LERP_SPEED_FORM * dt;
+      positions[i3+1] += (tyArr[i] - positions[i3+1]) * LERP_SPEED_FORM * dt;
+      positions[i3+2] += (tzArr[i] - positions[i3+2]) * LERP_SPEED_FORM * dt;
+
+      // Color shift to warm in form mode
+      const warmR = i < CORE_COUNT ? 0.9 : 0.3;
+      const warmG = i < CORE_COUNT ? 0.6 : 0.9;
+      const warmB = i < CORE_COUNT ? 0.2 : 0.8;
+      colAttr.array[i3]   += (warmR - colAttr.array[i3])   * 0.03 * dt;
+      colAttr.array[i3+1] += (warmG - colAttr.array[i3+1]) * 0.03 * dt;
+      colAttr.array[i3+2] += (warmB - colAttr.array[i3+2]) * 0.03 * dt;
+
+    } else {
+      // Free chaos movement
+      velX[i] += (Math.random() - 0.5) * 0.001;
+      velY[i] += (Math.random() - 0.5) * 0.001;
+      velZ[i] += (Math.random() - 0.5) * 0.001;
+
+      // Dampen
+      velX[i] *= 0.995;
+      velY[i] *= 0.995;
+      velZ[i] *= 0.995;
+
+      // Soft boundary
+      const px = positions[i3], py = positions[i3+1], pz = positions[i3+2];
+      const bound = SPREAD * 0.5;
+      if (Math.abs(px) > bound) velX[i] -= px * 0.002;
+      if (Math.abs(py) > bound) velY[i] -= py * 0.002;
+      if (Math.abs(pz) > bound) velZ[i] -= pz * 0.002;
+
+      positions[i3]   += velX[i] * dt;
+      positions[i3+1] += velY[i] * dt;
+      positions[i3+2] += velZ[i] * dt;
+
+      // Color drift back to neon
+      const hue = (i / PARTICLE_COUNT * 0.4 + 0.45 + time * 0.00002) % 1;
+      const col = new THREE.Color().setHSL(hue, 0.9, 0.75);
+      colAttr.array[i3]   += (col.r - colAttr.array[i3])   * 0.02 * dt;
+      colAttr.array[i3+1] += (col.g - colAttr.array[i3+1]) * 0.02 * dt;
+      colAttr.array[i3+2] += (col.b - colAttr.array[i3+2]) * 0.02 * dt;
     }
-
-    if (mode === "FORM") {
-      px += (particles[i].tx - px) * 0.05;
-      py += (particles[i].ty - py) * 0.05;
-    }
-
-    pos[i*3] = px;
-    pos[i*3+1] = py;
   }
 
-  window.points.geometry.attributes.position.needsUpdate = true;
+  posAttr.needsUpdate = true;
+  colAttr.needsUpdate = true;
+
+  // Slow rotation in form mode
+  particles.rotation.y += mode === 'FORM'
+    ? 0.003 * dt
+    : 0.0005 * dt;
 
   renderer.render(scene, camera);
 }
+requestAnimationFrame(animate);
 
-// ===== SATURN SHAPE =====
-function generateSaturn() {
-  for (let i = 0; i < particleCount; i++) {
+// ─── RESIZE ────────────────────────────────────────────────────────────────
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+window.addEventListener('resize', onResize);
 
-    let angle = Math.random() * Math.PI * 2;
+// ─── OVERLAY CANVAS RESIZE ─────────────────────────────────────────────────
+function resizeOverlay() {
+  overlayC.width  = overlayC.offsetWidth;
+  overlayC.height = overlayC.offsetHeight;
+}
+resizeOverlay();
+window.addEventListener('resize', resizeOverlay);
 
-    if (i < particleCount * 0.4) {
-      // inti
-      let r = Math.random() * 30;
-      particles[i].tx = center.x + r * Math.cos(angle);
-      particles[i].ty = center.y + r * Math.sin(angle);
-    } else {
-      // ring
-      let r = 60 + Math.random() * 40;
-      particles[i].tx = center.x + r * Math.cos(angle);
-      particles[i].ty = center.y + r * 0.4 * Math.sin(angle);
-    }
+// ─── START CAMERA ──────────────────────────────────────────────────────────
+async function init() {
+  document.getElementById('loading-msg').textContent = 'Meminta akses kamera…';
+  try {
+    await mpCamera.start();
+    document.getElementById('loading-msg').textContent = 'Memuat model tangan…';
+    // Give MediaPipe time to load
+    setTimeout(() => {
+      const ls = document.getElementById('loading-screen');
+      ls.style.transition = 'opacity 0.8s';
+      ls.style.opacity = '0';
+      setTimeout(() => ls.remove(), 800);
+    }, 2000);
+  } catch (e) {
+    document.getElementById('loading-msg').textContent = 'Izin kamera diperlukan';
+    console.error(e);
   }
 }
 
-// ===== HAND TRACKING =====
-function setupHandTracking() {
-  const video = document.getElementById('input_video');
-
-  const hands = new Hands({
-    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-  });
-
-  hands.setOptions({
-    maxNumHands: 1,
-    minDetectionConfidence: 0.7,
-    minTrackingConfidence: 0.7
-  });
-
-  hands.onResults(results => {
-    if (results.multiHandLandmarks.length > 0) {
-      let lm = results.multiHandLandmarks[0];
-
-      let x = (lm[9].x - 0.5) * 400;
-      let y = -(lm[9].y - 0.5) * 400;
-
-      center.x = x;
-      center.y = y;
-
-      // deteksi fist sederhana
-      let open = lm[8].y < lm[6].y;
-
-      if (!open) {
-        mode = "FORM";
-        generateSaturn();
-      } else {
-        mode = "FREE";
-      }
-    }
-  });
-
-  const cam = new Camera(video, {
-    onFrame: async () => {
-      await hands.send({image: video});
-    },
-    width: 640,
-    height: 480
-  });
-
-  cam.start();
-}
+init();
 </script>
-
 </body>
 </html>
