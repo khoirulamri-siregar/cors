@@ -2,13 +2,14 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>History Loop Trap</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Mobile History Loop</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -16,246 +17,294 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c0a1e, #1a1040, #2d1b69);
+            font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
             padding: 16px;
+            touch-action: manipulation;
         }
 
         .card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 40px;
-            padding: 48px 40px;
-            max-width: 520px;
+            border-radius: 32px;
+            padding: 40px 28px;
+            max-width: 440px;
             width: 100%;
             text-align: center;
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+            transition: transform 0.15s ease;
+        }
+
+        .icon-big {
+            font-size: 4.2rem;
+            display: block;
+            margin-bottom: 8px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
         }
 
         h1 {
-            font-size: 2.6rem;
-            font-weight: 800;
+            font-size: 2rem;
+            font-weight: 700;
             color: #fff;
-            margin-bottom: 8px;
-        }
-
-        .emoji-big {
-            font-size: 4rem;
-            display: block;
-            margin-bottom: 12px;
+            margin-bottom: 6px;
+            letter-spacing: -0.5px;
         }
 
         .subtitle {
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 1.05rem;
-            line-height: 1.7;
-            margin-bottom: 24px;
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
         }
 
         .highlight {
-            color: #f472b6;
+            color: #a78bfa;
             font-weight: 600;
         }
 
         .counter-box {
             background: rgba(255, 255, 255, 0.04);
             border-radius: 20px;
-            padding: 20px;
-            margin: 16px 0 24px;
+            padding: 18px 16px;
+            margin: 12px 0 20px;
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .counter-label {
-            color: rgba(255, 255, 255, 0.35);
-            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 0.7rem;
             text-transform: uppercase;
-            letter-spacing: 3px;
+            letter-spacing: 2.5px;
         }
 
         .counter-number {
-            color: #f472b6;
-            font-size: 4rem;
+            color: #a78bfa;
+            font-size: 3.6rem;
             font-weight: 800;
             display: block;
-            line-height: 1.2;
+            line-height: 1.1;
+            font-variant-numeric: tabular-nums;
         }
 
         .btn {
-            padding: 16px 40px;
-            font-size: 1.1rem;
+            padding: 16px 24px;
+            font-size: 1rem;
             font-weight: 600;
             border: none;
             border-radius: 60px;
-            background: linear-gradient(135deg, #ec4899, #be185d);
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
             color: #fff;
             cursor: pointer;
             transition: all 0.2s ease;
-            box-shadow: 0 8px 24px rgba(236, 72, 153, 0.3);
+            box-shadow: 0 8px 24px rgba(124, 58, 237, 0.3);
             width: 100%;
-        }
-
-        .btn:hover {
-            transform: scale(1.02);
-            box-shadow: 0 12px 32px rgba(236, 72, 153, 0.5);
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
         }
 
         .btn:active {
-            transform: scale(0.97);
+            transform: scale(0.96);
         }
 
-        .warning {
-            margin-top: 20px;
-            color: rgba(255, 255, 255, 0.2);
-            font-size: 0.8rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            padding-top: 18px;
+        .status-bar {
+            margin-top: 16px;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
-        .back-indicator {
-            display: inline-block;
-            background: rgba(244, 114, 182, 0.12);
-            color: #f472b6;
-            padding: 6px 16px;
+        .badge {
+            background: rgba(167, 139, 250, 0.1);
+            color: #a78bfa;
+            padding: 6px 14px;
             border-radius: 30px;
-            font-size: 0.8rem;
-            margin-top: 12px;
-            border: 1px solid rgba(244, 114, 182, 0.15);
+            font-size: 0.75rem;
+            border: 1px solid rgba(167, 139, 250, 0.1);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge.warning {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.15);
+        }
+
+        .warning-text {
+            margin-top: 18px;
+            color: rgba(255, 255, 255, 0.15);
+            font-size: 0.7rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            padding-top: 16px;
+            line-height: 1.5;
         }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <span class="emoji-big">🔄</span>
-        <h1>History Loop</h1>
+    <div class="card" id="mainCard">
+        <span class="icon-big">📱</span>
+        <h1>Loop Trap</h1>
         <p class="subtitle">
-            Tekan tombol <span class="highlight">⬅️ Back</span> di browser kamu.
-            <br />Lihat apa yang terjadi...
+            Swipe dari kiri atau tekan tombol <span class="highlight">⬅️ Back</span> di HP kamu
         </p>
 
         <div class="counter-box">
-            <span class="counter-label">Kamu sudah mencoba back sebanyak</span>
+            <span class="counter-label">Total back gesture</span>
             <span class="counter-number" id="backCounter">0</span>
-            <span class="counter-label">kali</span>
         </div>
 
-        <button class="btn" id="resetBtn">🧹 Reset & Keluar</button>
-        
-        <div class="back-indicator" id="lastAction">
-            ⏳ Belum ada aksi
+        <button class="btn" id="resetBtn">🔄 Reset & Tetap di Sini</button>
+
+        <div class="status-bar">
+            <span class="badge" id="lastStatus">✅ Siap</span>
+            <span class="badge warning" id="deviceType">📱 Mobile</span>
         </div>
 
-        <div class="warning">
-            ⚠️ Tombol back browser akan <strong>selalu</strong> kembali ke halaman ini.
+        <div class="warning-text">
+            ⚡ Swipe back / tombol back <strong>tidak akan membawamu keluar</strong>
         </div>
     </div>
 
     <script>
         (function() {
-            // Counter buat ngerekam berapa kali user mencoba back
-            let backCount = parseInt(localStorage.getItem('historyLoopCount')) || 0;
-            const counterEl = document.getElementById('backCounter');
-            const lastActionEl = document.getElementById('lastAction');
-            
-            // Update tampilan awal
-            counterEl.textContent = backCount;
-
-            // === INI JEBOLNYA ===
-            // Setiap kali halaman dimuat, kita push state baru
-            // Jadi history browser selalu punya "halaman ini" sebagai yang terakhir
-            
-            function pushNewState() {
-                // Push state dengan URL yang sama tapi beda state object
-                const stateObj = { 
-                    time: Date.now(),
-                    count: backCount 
-                };
-                history.pushState(stateObj, '', window.location.href);
-                
-                // Update indikator
-                lastActionEl.textContent = '✅ State baru ditambahkan ke history';
-                lastActionEl.style.color = '#34d399';
-                
-                console.log(`📌 Push state ke-${backCount + 1}`);
+            // === DETEKSI DEVICE ===
+            const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const deviceEl = document.getElementById('deviceType');
+            if (isMobile) {
+                deviceEl.textContent = '📱 HP / iPhone';
+            } else {
+                deviceEl.textContent = '💻 Desktop';
             }
 
-            // === DETECT TOMBOL BACK ===
-            // Event 'popstate' terpicu saat user tekan back/forward
+            // === COUNTER ===
+            let backCount = parseInt(localStorage.getItem('mobileLoopCount')) || 0;
+            const counterEl = document.getElementById('backCounter');
+            const statusEl = document.getElementById('lastStatus');
+            counterEl.textContent = backCount;
+
+            // === FUNGSI PUSH STATE ===
+            function pushNewState() {
+                const stateObj = {
+                    t: Date.now(),
+                    c: backCount
+                };
+                history.pushState(stateObj, '', window.location.href);
+                statusEl.textContent = '✅ State ditambahkan';
+                statusEl.style.color = '#34d399';
+                console.log('📌 Push state mobile');
+            }
+
+            // === PERANGKAP UTAMA: popstate ===
+            // Ini yang menangkap:
+            // - Swipe back di iPhone (gestur dari kiri)
+            // - Tombol back bawaan Android
+            // - Tombol back di browser manapun
             window.addEventListener('popstate', function(event) {
                 // Tambah counter
                 backCount += 1;
-                localStorage.setItem('historyLoopCount', backCount);
+                localStorage.setItem('mobileLoopCount', backCount);
                 counterEl.textContent = backCount;
-                
-                // Update indikator
-                lastActionEl.textContent = `⬅️ Kamu tekan BACK! (ke-${backCount})`;
-                lastActionEl.style.color = '#f472b6';
-                
-                console.log(`🔁 Back ditekan! Total: ${backCount}`);
-                
-                // ⭐ KRUSIAL: Push state BARU setelah popstate
-                // Ini yang bikin loop - setiap back malah nambah state lagi
-                pushNewState();
-                
-                // Efek visual getar
-                document.querySelector('.card').style.transform = 'scale(0.98)';
+
+                // Update status
+                const gestureType = isMobile ? '👆 Swipe/Back HP' : '⬅️ Tombol Back';
+                statusEl.textContent = `${gestureType} terdeteksi! (ke-${backCount})`;
+                statusEl.style.color = '#f472b6';
+
+                // Efek visual: card sedikit getar
+                const card = document.getElementById('mainCard');
+                card.style.transform = 'scale(0.97) rotate(-0.5deg)';
                 setTimeout(() => {
-                    document.querySelector('.card').style.transform = '';
-                }, 150);
+                    card.style.transform = '';
+                }, 200);
+
+                console.log(`🔁 Back/Swipe! Total: ${backCount}`);
+
+                // ⭐ KRUSIAL: Push state baru biar loop terus
+                pushNewState();
+
+                // === TAMBAHAN UNTUK IPHONE ===
+                // iPhone kadang butuh sedikit delay biar gestur benar-benar ketangkep
+                // Ini sudah aman karena popstate tetap terpicu
             });
 
-            // === INITIAL SETUP ===
-            // Saat pertama kali load, kita push state awal
-            // Biar history-nya langsung punya 1 state
+            // === INISIALISASI ===
+            // Push state pertama
             if (history.state === null) {
                 pushNewState();
             } else {
-                // Kalau udah ada state, push lagi biar aman
                 pushNewState();
             }
 
             // === TOMBOL RESET ===
             document.getElementById('resetBtn').addEventListener('click', function() {
-                // Reset counter
                 backCount = 0;
-                localStorage.setItem('historyLoopCount', '0');
+                localStorage.setItem('mobileLoopCount', '0');
                 counterEl.textContent = '0';
-                lastActionEl.textContent = '🧹 Counter di-reset';
-                lastActionEl.style.color = '#fbbf24';
-                
-                // Kosongkan history (cara simple: pindah ke halaman kosong lalu balik)
-                // TAPI biar tetap di sini, kita push state baru
-                // Hapus semua state dengan replace
+                statusEl.textContent = '🔄 Counter direset';
+                statusEl.style.color = '#fbbf24';
+
+                // Reset history
                 history.replaceState(null, '', window.location.href);
                 pushNewState();
-                
-                console.log('🔄 Reset semua state');
+
+                // Efek
+                const card = document.getElementById('mainCard');
+                card.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    card.style.transform = '';
+                }, 200);
+
+                console.log('🔄 Reset mobile loop');
             });
 
-            // === TAMBAHAN: Cegah reload pake Ctrl+R (opsional) ===
-            // Ini untuk efek "stuck" maksimal
-            window.addEventListener('keydown', function(e) {
-                // Cegah reload dengan Ctrl+R atau F5
-                if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+            // === CEGAH RELOAD DI HP (opsional) ===
+            // Banyak HP punya gesture refresh, kita cegah sebagian
+            let startY = 0;
+            document.addEventListener('touchstart', function(e) {
+                startY = e.touches[0].clientY;
+            });
+
+            document.addEventListener('touchmove', function(e) {
+                const deltaY = e.touches[0].clientY - startY;
+                // Kalau swipe dari atas (refresh gesture) di browser mobile
+                if (deltaY > 80 && window.scrollY === 0) {
                     e.preventDefault();
-                    lastActionEl.textContent = '🚫 Gak bisa reload! Tetap di sini.';
-                    lastActionEl.style.color = '#ef4444';
-                    
-                    // Push state lagi biar makin mantap
+                    statusEl.textContent = '🚫 Pull-to-refresh dicegah!';
+                    statusEl.style.color = '#ef4444';
                     pushNewState();
                 }
-                // Cegah F5
-                if (e.key === 'F5') {
-                    e.preventDefault();
-                    lastActionEl.textContent = '🚫 F5 gak berpengaruh!';
-                    lastActionEl.style.color = '#ef4444';
+            }, { passive: false });
+
+            // === CEGAH BACK GESTURE DEFAULT (cara halus) ===
+            // Di beberapa browser, kita bisa kasih efek tambahan
+            // Tapi popstate sudah cukup ampuh
+
+            console.log('🔥 Mobile History Loop AKTIF!');
+            console.log(`📱 Device: ${isMobile ? 'Mobile/iPhone' : 'Desktop'}`);
+            console.log('👆 Coba swipe back atau tekan tombol back');
+
+            // === TAMBAHAN: DETEKSI VISIBILITY CHANGE ===
+            // Kalau user pindah tab dan balik, tetap aman
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    console.log('📴 Tab disembunyikan');
+                } else {
+                    console.log('📱 Tab aktif kembali');
+                    // Push state lagi biar aman
                     pushNewState();
                 }
             });
 
-            console.log('🔥 History Loop aktif! Coba tekan tombol back browser.');
         })();
     </script>
 
